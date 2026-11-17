@@ -1,3 +1,5 @@
+# backend/services/manager.py
+
 import json
 from openai import OpenAI
 from pydantic import ValidationError
@@ -32,7 +34,16 @@ class ManagerAgent:
                 temperature=0.2,
             )
 
-            content = response.choices[0].message.content.strip()
+            message_content = response.choices[0].message.content
+
+            if message_content is None:
+                return ManagerOutput(
+                    is_valid=False,
+                    technical_instructions=None,
+                    validation_notes="La IA no devolvió contenido"
+                )
+
+            content = message_content.strip()
             data = json.loads(content)
             return ManagerOutput(**data)
 

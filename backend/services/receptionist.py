@@ -1,17 +1,15 @@
-import os
+# backend/services/receptionist.py
+
 import json
-from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import ValidationError
 
 from models import ReceptionistOutput
-from backend.prompts.receptionist_prompt import RECEPCIONISTA_SYSTEM_PROMPT
+from prompts.receptionist_prompt import RECEPCIONISTA_SYSTEM_PROMPT
 from config import GROK_MODEL, XAI_API_KEY
 
-load_dotenv()
-
 client = OpenAI(
-    api_key=XAI_API_KEY
+    api_key=XAI_API_KEY,
     base_url="https://api.x.ai/v1"
 )
 
@@ -36,9 +34,16 @@ class ReceptionistAgent:
                 temperature=0.2,
             )
 
-            content = response.choices[0].message.content.strip()
+            message_content = response.choices[0].message.content
 
-            # Intentamos parsear el JSON que devuelve Grok
+            if message_content is None:
+                return ReceptionistOutput(
+                    needs_database=False,
+                    cleaned_prompt=user_prompt,
+                    reason="La IA no devolvió contenido"
+                )
+
+            content = message_content.strip()
             data = json.loads(content)
             return ReceptionistOutput(**data)
 

@@ -1,0 +1,8 @@
+# backend/requirements.txt
+
+pandas
+python-dotenv
+openai
+fastapi
+uvicorn
+pydantic

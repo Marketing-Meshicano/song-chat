@@ -1,0 +1,166 @@
+<!-- frontend/index.html -->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Chat - Sistema Multi-Agente</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .chat-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .agent-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .agent-card h3 {
+            margin: 0 0 10px 0;
+            color: #007bff;
+        }
+        .agent-card pre {
+            background: #f4f4f4;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        .final-response {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #4caf50;
+            margin-top: 20px;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Song Chat</h1>
+    <p style="text-align: center; color: #666;">Sistema Multi-Agente con Grok</p>
+
+    <div class="chat-container">
+        <textarea id="prompt" placeholder="Escribe tu pregunta sobre canciones..."></textarea>
+        <button onclick="sendQuery()" id="send-btn">Enviar Consulta</button>
+
+        <div id="loading" class="loading" style="display: none; margin-top: 15px;">
+            Procesando con los agentes...
+        </div>
+
+        <div id="final-response" class="final-response" style="display: none;"></div>
+
+        <div id="agents-container" style="margin-top: 30px; display: none;">
+            <h2>Pasos Intermedios (Vista Administrativa)</h2>
+            <div id="agents-content"></div>
+        </div>
+    </div>
+
+    <script>
+        async function sendQuery() {
+            const prompt = document.getElementById('prompt').value.trim();
+            if (!prompt) return;
+
+            const loadingDiv = document.getElementById('loading');
+            const responseDiv = document.getElementById('final-response');
+            const agentsContainer = document.getElementById('agents-container');
+            const agentsContent = document.getElementById('agents-content');
+            const sendBtn = document.getElementById('send-btn');
+
+            // Estado de carga
+            loadingDiv.style.display = 'block';
+            responseDiv.style.display = 'none';
+            agentsContainer.style.display = 'none';
+            agentsContent.innerHTML = '';
+            sendBtn.disabled = true;
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                const data = await res.json();
+
+                // Mostrar respuesta final
+                if (data.analyst) {
+                    responseDiv.innerHTML = `<strong>Respuesta Final:</strong><br>${data.analyst.final_response}`;
+                    responseDiv.style.display = 'block';
+                }
+
+                // Mostrar logs por agente
+                if (data.execution_logs && data.execution_logs.length > 0) {
+                    agentsContent.innerHTML = '';
+                    data.execution_logs.forEach(log => {
+                        const card = document.createElement('div');
+                        card.className = 'agent-card';
+                        card.innerHTML = `
+                            <h3>${log.agent_name.toUpperCase()}</h3>
+                            <p><strong>Éxito:</strong> ${log.success}</p>
+                            <pre>${JSON.stringify(log.output, null, 2)}</pre>
+                        `;
+                        agentsContent.appendChild(card);
+                    });
+                    agentsContainer.style.display = 'block';
+                }
+
+            } catch (error) {
+                responseDiv.innerHTML = "Error al conectar con la API.";
+                responseDiv.style.display = 'block';
+                console.error(error);
+            } finally {
+                loadingDiv.style.display = 'none';
+                sendBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
